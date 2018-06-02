@@ -157,7 +157,7 @@ use futures::Future;
 
 #[derive(Clone)]
 struct Server {
-    client_pubkey: Arc<thrussh_keys::key::PublicKey>
+    //client_pubkey: Arc<thrussh_keys::key::PublicKey>
 }
 
 impl server::Server for Server {
@@ -184,8 +184,18 @@ impl server::Handler for Server {
     fn finished(self, session: Session) -> Self::FutureUnit {
         futures::finished((self, session))
     }
-
-    fn auth_publickey(self, _: &str, _: &key::PublicKey) -> Self::FutureAuth {
+    
+    // For the next three methods:
+    //   Always accept attempts to authenticate
+    fn auth_none(self, _user: &str) -> Self::FutureAuth {
+        futures::finished((self, server::Auth::Accept))
+    }
+    
+    fn auth_password(self, _user: &str, _password: &str) -> Self::FutureAuth {
+        futures::finished((self, server::Auth::Accept))
+    }
+    
+    fn auth_publickey(self, _user: &str, _pubkey: &key::PublicKey) -> Self::FutureAuth {
         futures::finished((self, server::Auth::Accept))
     }
     
@@ -197,7 +207,7 @@ impl server::Handler for Server {
 }
 
 struct Client {
-    key: Arc<thrussh_keys::key::KeyPair>
+    //key: Arc<thrussh_keys::key::KeyPair>
 }
 
 impl client::Handler for Client {
@@ -225,12 +235,13 @@ impl client::Handler for Client {
 
 impl Client {
     fn run(self, config: Arc<client::Config>, _: &str) {
-        let key = self.key.clone();
+        //let key = self.key.clone();
         tokio::run(
             client::connect_future(
                 "127.0.0.1:2222", config, None, self,
                 |connection| {
-                    connection.authenticate_key("pe", key)
+                    //connection.authenticate_key("pe", key)
+                    connection.authenticate_password("user", "password".to_string())
                         .and_then(|session| {
                             session.channel_open_session().and_then(|(session, channelid)| {
                                 session.data(channelid, None, "Hello, world!").and_then(|(mut session, _)| {
@@ -248,31 +259,31 @@ fn main() {
     env_logger::init();
     
     // Starting the server thread.
-    let client_key = thrussh_keys::key::KeyPair::generate(thrussh_keys::key::ED25519).unwrap();
-    let client_pubkey = Arc::new(client_key.clone_public_key());
+    //let client_key = thrussh_keys::key::KeyPair::generate(thrussh_keys::key::ED25519).unwrap();
+    //let client_pubkey = Arc::new(client_key.clone_public_key());
     
-    println!("Client key: {:?}\n", client_key);
-    println!("Client public key: {:?}\n", client_pubkey);
+    //println!("Client key: {:?}\n", client_key);
+    //println!("Client public key: {:?}\n", client_pubkey);
     
     let server_thread = std::thread::spawn(|| {
         let mut config = thrussh::server::Config::default();
         config.connection_timeout = Some(std::time::Duration::from_secs(600));
         config.auth_rejection_time = std::time::Duration::from_secs(3);
-        config.keys.push(thrussh_keys::key::KeyPair::generate(thrussh_keys::key::ED25519).unwrap());
+        //config.keys.push(thrussh_keys::key::KeyPair::generate(thrussh_keys::key::ED25519).unwrap());
         
         let config = Arc::new(config);
         
-        let sh = Server { client_pubkey };
+        let sh = Server { /*client_pubkey*/ };
         thrussh::server::run(config, "0.0.0.0:2222", sh);
     });
     
-    std::thread::sleep(std::time::Duration::from_secs(3));
+    std::thread::sleep(std::time::Duration::from_secs(5));
     let mut config = thrussh::client::Config::default();
     config.connection_timeout = Some(std::time::Duration::from_secs(600));
     let config = Arc::new(config);
     
-    let sh = Client { key: Arc::new(client_key) };
-    sh.run(config, "127.0.0.1:2222");
+    let ssh_client = Client { /*key: Arc::new(client_key)*/ };
+    ssh_client.run(config, "127.0.0.1:2222");
     
     // Kill the server thread after the client has ended.
     std::mem::forget(server_thread)
