@@ -1,0 +1,12 @@
+[package]
+name = "thrussh-test"
+version = "0.1.0"
+authors = ["MggMuggins <mggmugginsmc@gmail.com>"]
+
+[dependencies]
+thrussh = { git = "https://github.com/MggMuggins/thrussh" }
+thrussh-keys = { git = "https://github.com/MggMuggins/thrussh" }
+env_logger = "0.5.9"
+futures = "0.1.21"
+tokio = { git = "https://github.com/redox-os/tokio" }
+ring = "0.12.1"
